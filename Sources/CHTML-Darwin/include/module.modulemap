@@ -1,0 +1,10 @@
+module CHTML [system] [extern_c] {
+
+    header "libxml/HTMLparser.h"
+    header "libxml/HTMLtree.h"
+
+    link "xml2"
+
+    export *
+
+}
