@@ -105,6 +105,7 @@ public extension HTML {
         #endif
 
         public var font: Font?
+        public var attributes = [NSAttributedString.Key: Any]()
         public static let `default` = AttributedStringOptions()
     }
 
@@ -192,7 +193,7 @@ extension HTML.Node {
     }
 
     public func attributedString(options: HTML.AttributedStringOptions = .default) -> NSMutableAttributedString {
-        var attributes = [NSAttributedString.Key: Any]()
+        var attributes = options.attributes
         attributes[.font] = options.font ?? .htmlDefault
 
         let attributedString = NSMutableAttributedString()
