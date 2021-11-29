@@ -64,26 +64,26 @@ class HTMLDocumentTests: XCTestCase {
 
     func testCollectionCount() throws {
         let html = try loadFixture()
-        XCTAssertEqual(html.count, 2)
-        XCTAssertEqual(html.first?.count, 26)
+        XCTAssertEqual(html.count, 5)
+        XCTAssertEqual(html.dropFirst().first?.count, 53)
         XCTAssertEqual(try HTMLDocument.parse("<html />").count, 0)
     }
 
     func testCollectionFirst() throws {
         let html = try loadFixture()
-        let head = html.first
+        let head = html.dropFirst().first
         XCTAssertNotNil(head)
         XCTAssertEqual(head?.name, "head")
         XCTAssertEqual(head?.kind, .element)
 
-        let title = head?.dropFirst().first
+        let title = head?.dropFirst(3).first
         XCTAssertEqual(title?.name, "title")
         XCTAssertEqual(title?.kind, .element)
         XCTAssertEqual(title?.content, "XML - Wikipedia")
 
         XCTAssertNil(head?.first?.first)
 
-        let body = html.dropFirst().first
+        let body = html.dropFirst(3).first
         XCTAssertNotNil(body)
         XCTAssertEqual(body?.name, "body")
         XCTAssertEqual(body?.kind, .element)
@@ -98,8 +98,6 @@ class HTMLDocumentTests: XCTestCase {
         XCTAssertEqual(footer?.kind, .element)
         XCTAssertEqual(footer?.content.isEmpty, false)
         XCTAssertEqual(footer?["id"], "footer")
-
-        XCTAssertNil(footer?.dropFirst(5).first?.first)
     }
 
     func testAttributes() throws {

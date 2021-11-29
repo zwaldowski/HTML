@@ -46,8 +46,7 @@ public final class HTMLDocument {
             HTML_PARSE_RECOVER.rawValue |
             HTML_PARSE_NOERROR.rawValue |
             HTML_PARSE_NOWARNING.rawValue |
-            HTML_PARSE_NONET.rawValue |
-            HTML_PARSE_NOBLANKS.rawValue)
+            HTML_PARSE_NONET.rawValue)
 
         guard let handle = input.withCString({ (cString) in
             htmlReadMemory(cString, Int32(strlen(cString)), nil, "UTF-8", options)
