@@ -5,11 +5,7 @@
 //  Created by Zachary Waldowski on 2/19/19.
 //
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 import libxml2
-#else
-import CHTML
-#endif
 
 /// A fragment of HTML parsed into a logical tree structure. A tree can have
 /// many child nodes but only one element, the root element.

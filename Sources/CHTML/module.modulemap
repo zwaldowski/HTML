@@ -1,9 +1,0 @@
-module CHTML [system] [extern_c] {
-
-    umbrella header "CHTML.h"
-    
-    link "xml2"
-
-    export *
-
-}
