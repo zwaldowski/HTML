@@ -5,8 +5,8 @@
 //  Created by Zachary Waldowski on 9/17/19.
 //
 
-import XCTest
 import HTML
+import XCTest
 
 func assertNumberOfLines(_ numberOfLines: Int, in text: NSAttributedString, file: StaticString = #file, line: UInt = #line) {
     let count = text.string.split(omittingEmptySubsequences: false) {
@@ -40,128 +40,128 @@ class HTMLAttributedStringTests: XCTestCase {
         ("testThatUnsupportedTagsAreIgnored", testThatUnsupportedTagsAreIgnored),
     ]
 
-    func testHTMLParses() throws {
-        let text = try HTMLDocument.parse("""
+    func testHTMLParses() {
+        let text = HTML.attributedString(from: """
             <b>Hello, <br /><br /><i>world</i>!</b><br />
-        """).attributedString()
+        """)
         assertNumberOfLines(4, in: text)
         assertNumberOfRanges(4, for: .font, in: text)
     }
 
-    func testThatEntitiesParse() throws {
-        let text = try HTMLDocument.parse("""
+    func testThatEntitiesParse() {
+        let text = HTML.attributedString(from: """
             <b>Hello,&nbsp;<br /><br /><i>world</i>!</b><br />
-        """).attributedString()
+        """)
 
         assertNumberOfLines(4, in: text)
         assertNumberOfRanges(4, for: .font, in: text)
         XCTAssertNil(text.string.range(of: "&"))
     }
     
-    func testThatCommentsAreIgnored() throws {
-        let text = try HTMLDocument.parse("""
+    func testThatCommentsAreIgnored() {
+        let text = HTML.attributedString(from: """
             <p>Super. Computer.</p><!-- Blah blah blah. -->
-        """).attributedString()
+        """)
         
         assertNumberOfLines(1, in: text)
         assertNumberOfRanges(1, for: .font, in: text)
         XCTAssertNil(text.string.range(of: "Blah blah blah."))
     }
 
-    func testClearlyBrokenHTMLParses() throws {
-        let text = try HTMLDocument.parse("""
+    func testClearlyBrokenHTMLParses() {
+        let text = HTML.attributedString(from: """
             <b>Hello, <BR><BR><I>world</b></i>!<br />
-        """).attributedString()
+        """)
 
         assertNumberOfLines(4, in: text)
         assertNumberOfRanges(3, for: .font, in: text)
     }
 
-    func testThatUnsupportedTagsAreIgnored() throws {
-        let text = try HTMLDocument.parse("""
+    func testThatUnsupportedTagsAreIgnored() {
+        let text = HTML.attributedString(from: """
             <b>Hello, <br /><br /><i><font face="Times New Roman">world</font></i>!</b><br />
-        """).attributedString()
+        """)
 
         assertNumberOfLines(4, in: text)
         assertNumberOfRanges(4, for: .font, in: text)
     }
 
-    func testThatLinksAreParsed() throws {
-        let text = try HTMLDocument.parse("""
+    func testThatLinksAreParsed() {
+        let text = HTML.attributedString(from: """
             Super. Computer. <a href="http://www.apple.com/ipad-pro/" title="iPad Pro">Now in two sizes.</a>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(1, in: text)
         assertNumberOfRanges(1, for: .font, in: text)
         assertNumberOfRanges(2, for: .link, in: text)
     }
 
-    func testThatInvalidLinksAreNotParsed() throws {
-        let text = try HTMLDocument.parse("""
+    func testThatInvalidLinksAreNotParsed() {
+        let text = HTML.attributedString(from: """
             Super. Computer. <a>Now in two sizes.</a>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(1, in: text)
         assertNumberOfRanges(1, for: .font, in: text)
         assertNumberOfRanges(1, for: .link, in: text)
     }
 
-    func testLists() throws {
-        let orderedList = try HTMLDocument.parse("""
+    func testLists() {
+        let orderedList = HTML.attributedString(from: """
             <ol><li>a</li><li>b</li></ol>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(3, in: orderedList)
         XCTAssertEqual(orderedList.string, "1. a\n2. b\n")
 
-        let numberedList = try HTMLDocument.parse("""
+        let numberedList = HTML.attributedString(from: """
             <ol start="5"><li>a\n</li>\n<li>b</li></ol>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(3, in: numberedList)
         XCTAssertEqual(numberedList.string, "5. a\n6. b\n")
 
-        let unorderedList = try HTMLDocument.parse("""
+        let unorderedList = HTML.attributedString(from: """
             <ul><li>a</li><li>b</li></ul>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(3, in: unorderedList)
         XCTAssertEqual(unorderedList.string, "• a\n• b\n")
     }
    
-    func testListItemsNotInAList() throws {
-        let noOpenerList = try HTMLDocument.parse("""
+    func testListItemsNotInAList() {
+        let noOpenerList = HTML.attributedString(from: """
             <li>one</li>
             <li>two</li>
             <li>three</li>
             </ol>
-        """).attributedString()
+        """)
         assertNumberOfLines(4, in: noOpenerList)
         XCTAssertEqual(noOpenerList.string, "one\ntwo\nthree\n")
     }
 
-    func testListItemsWithoutClosingTags() throws {
-        let brokeList = try HTMLDocument.parse("""
+    func testListItemsWithoutClosingTags() {
+        let brokeList = HTML.attributedString(from: """
             <ol>
             <li>ol without closing tags
             <li>item 2
             <li>item 3
             </ol>
-        """).attributedString()
+        """)
         assertNumberOfLines(4, in: brokeList)
         XCTAssertEqual(brokeList.string, "1. ol without closing tags\n2. item 2\n3. item 3\n")
     }
 
-    func testInsignificantNewlines() throws {
-        let implicitRootNode = try HTMLDocument.parse("""
+    func testInsignificantNewlines() {
+        let implicitRootNode = HTML.attributedString(from: """
             (91) 1800 4250 744\n\n09:00 to 21:00 (Monday through Friday)<br />\n10:00 to 18:00 (Saturday)
-        """).attributedString()
+        """)
 
         assertNumberOfLines(2, in: implicitRootNode)
 
-        let explicitRootNode = try HTMLDocument.parse("""
+        let explicitRootNode = HTML.attributedString(from: """
             <p>(91) 1800 4250 744\n\n09:00 to 21:00 (Monday through Friday)<br />\n10:00 to 18:00 (Saturday)</p>
-        """).attributedString()
+        """)
 
         assertNumberOfLines(2, in: explicitRootNode)
     }
@@ -185,8 +185,7 @@ class HTMLAttributedStringTests: XCTestCase {
 
     func testCustomParsingPerformance() {
         measure {
-            _ = try? HTMLDocument.parse(self.speedTest)
-                .attributedString()
+            _ = HTML.attributedString(from: self.speedTest)
         }
     }
 

@@ -1,14 +1,14 @@
 //
-//  HTMLDocumentTests.swift
+//  HTMLTests.swift
 //  HTMLTests
 //
 //  Created by Zachary Waldowski on 4/23/19.
 //
 
-import XCTest
 import HTML
+import XCTest
 
-class HTMLDocumentTests: XCTestCase {
+class HTMLTests: XCTestCase {
     
     static let allTests = [
         ("testAttributes", testAttributes),
@@ -26,20 +26,20 @@ class HTMLDocumentTests: XCTestCase {
         ("testReflection", testReflection),
     ]
     
-    func loadFixture() throws -> HTMLDocument.Node {
-        return try HTMLDocument.parse(xml_dot_html)
+    func loadFixture() throws -> HTML.Node {
+        return try HTML.parse(xml_dot_html)
     }
 
     func testDoesNotParseEmptyString() throws {
-        XCTAssertThrowsError(try HTMLDocument.parse(""))
+        XCTAssertThrowsError(try HTML.parse(""))
     }
 
     func testDoesNotParseInvalidTag() throws {
-        XCTAssertThrowsError(try HTMLDocument.parse("<"))
+        XCTAssertThrowsError(try HTML.parse("<"))
     }
 
     func testParsesTextFragment() throws {
-        let fragment = try HTMLDocument.parse("Lorem ipsum dolor amet")
+        let fragment = try HTML.parse("Lorem ipsum dolor amet")
 
         XCTAssertEqual(fragment.name, "html")
         XCTAssertEqual(fragment.kind, .element)
@@ -59,14 +59,14 @@ class HTMLDocumentTests: XCTestCase {
     func testCollectionIsEmpty() throws {
         let html = try loadFixture()
         XCTAssertFalse(html.isEmpty)
-        XCTAssertEqual(try HTMLDocument.parse("<html />").isEmpty, true)
+        XCTAssertEqual(try HTML.parse("<html />").isEmpty, true)
     }
 
     func testCollectionCount() throws {
         let html = try loadFixture()
         XCTAssertEqual(html.count, 5)
         XCTAssertEqual(html.dropFirst().first?.count, 53)
-        XCTAssertEqual(try HTMLDocument.parse("<html />").count, 0)
+        XCTAssertEqual(try HTML.parse("<html />").count, 0)
     }
 
     func testCollectionFirst() throws {
@@ -110,7 +110,7 @@ class HTMLDocumentTests: XCTestCase {
     }
 
     func testContentForEmptyElement() throws {
-        let fragment = try HTMLDocument.parse("<img />")
+        let fragment = try HTML.parse("<img />")
         XCTAssertEqual(fragment.content, "")
     }
 
@@ -120,7 +120,7 @@ class HTMLDocumentTests: XCTestCase {
         XCTAssert(description.hasPrefix("<html"))
         XCTAssert(description.hasSuffix("</html>"))
 
-        let fragment = try HTMLDocument.parse("Lorem ipsum dolor amet")
+        let fragment = try HTML.parse("Lorem ipsum dolor amet")
         let fragmentDescription = String(reflecting: fragment)
         XCTAssertEqual(fragmentDescription, "<html><body><p>Lorem ipsum dolor amet</p></body></html>")
     }

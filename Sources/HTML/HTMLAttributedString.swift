@@ -9,9 +9,8 @@
 import UIKit
 
 private extension UIFont {
-
     static var htmlDefault: UIFont {
-        return .preferredFont(forTextStyle: .body)
+        preferredFont(forTextStyle: .body)
     }
 
     func addingSymbolicTraits(_ traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
@@ -34,9 +33,8 @@ private extension UIFont {
 import AppKit
 
 private extension NSFont {
-
     static var htmlDefault: NSFont {
-        return .systemFont(ofSize: NSFont.systemFontSize)
+        systemFont(ofSize: NSFont.systemFontSize)
     }
 
     func addingSymbolicTraits(_ traits: NSFontDescriptor.SymbolicTraits) -> NSFont {
@@ -47,13 +45,12 @@ private extension NSFont {
     }
 
     var boldFont: NSFont {
-        return addingSymbolicTraits(.bold)
+        addingSymbolicTraits(.bold)
     }
 
     var italicFont: NSFont {
-        return addingSymbolicTraits(.italic)
+        addingSymbolicTraits(.italic)
     }
-
 }
 #else
 import Foundation
@@ -64,32 +61,29 @@ public extension NSAttributedString.Key {
     static let link = NSAttributedString.Key("NSLink")
 }
 
-private extension HTMLDocument.Node.AttributedStringOptions.Font {
-
-    static var htmlDefault: HTMLDocument.Node.AttributedStringOptions.Font {
-        return HTMLDocument.Node.AttributedStringOptions.Font()
+private extension HTML.AttributedStringOptions.Font {
+    static var htmlDefault: HTML.AttributedStringOptions.Font {
+        HTML.AttributedStringOptions.Font()
     }
 
-    var boldFont: HTMLDocument.Node.AttributedStringOptions.Font {
+    var boldFont: HTML.AttributedStringOptions.Font {
         var result = self
         result.isBold = true
         return result
     }
 
-    var italicFont: HTMLDocument.Node.AttributedStringOptions.Font {
+    var italicFont: HTML.AttributedStringOptions.Font {
         var result = self
         result.isItalic = true
         return result
     }
-
 }
 #endif
 
 // MARK: -
 
-extension HTMLDocument.Node {
-
-    public struct AttributedStringOptions {
+public extension HTML {
+    struct AttributedStringOptions {
         #if canImport(UIKit)
         public typealias Font = UIFont
         public typealias UnderlineStyle = NSUnderlineStyle
@@ -111,30 +105,37 @@ extension HTMLDocument.Node {
         #endif
 
         public var font: Font?
-
-        public init() {}
+        public static let `default` = AttributedStringOptions()
     }
 
-    private func appendContents(to attributedString: NSMutableAttributedString, options: AttributedStringOptions, inheriting attributes: [NSAttributedString.Key: Any]) {
+    static func attributedString<Input>(from input: Input, options: AttributedStringOptions = .default) -> NSMutableAttributedString where Input: StringProtocol {
+        (try? parse(input).attributedString(options: options)) ?? NSMutableAttributedString()
+    }
+}
+
+// MARK: -
+
+extension HTML.Node {
+    func appendContents(to attributedString: NSMutableAttributedString, options: HTML.AttributedStringOptions, inheriting attributes: [NSAttributedString.Key: Any]) {
         var attributes = attributes
 
         switch (kind, name) {
         case (.element, "br"):
             attributedString.append(NSAttributedString(string: "\n", attributes: attributes))
         case (.element, "b"), (.element, "strong"):
-            guard let currentFont = attributes[.font] as? AttributedStringOptions.Font else { break }
+            guard let currentFont = attributes[.font] as? HTML.AttributedStringOptions.Font else { break }
             attributes[.font] = currentFont.boldFont
         case (.element, "i"), (.element, "em"):
-            guard let currentFont = attributes[.font] as? AttributedStringOptions.Font else { break }
+            guard let currentFont = attributes[.font] as? HTML.AttributedStringOptions.Font else { break }
             attributes[.font] = currentFont.italicFont
         case (.element, "u"):
             // `rawValue` needed due to <https://bugs.swift.org/browse/SR-3177>
-            attributes[.underlineStyle] = AttributedStringOptions.UnderlineStyle.single.rawValue
+            attributes[.underlineStyle] = HTML.AttributedStringOptions.UnderlineStyle.single.rawValue
         case (.element, "a"):
             guard let url = self["href"].flatMap(URL.init) else { break }
             // `rawValue` needed due to <https://bugs.swift.org/browse/SR-3177>
             attributes[.link] = url
-            attributes[.underlineStyle] = AttributedStringOptions.UnderlineStyle().rawValue
+            attributes[.underlineStyle] = HTML.AttributedStringOptions.UnderlineStyle().rawValue
         case (.element, "p"):
             if attributedString.length != 0 {
                 attributedString.append(NSAttributedString(string: "\n", attributes: attributes))
@@ -190,13 +191,12 @@ extension HTMLDocument.Node {
         }
     }
 
-    public func attributedString(options: AttributedStringOptions = AttributedStringOptions()) -> NSAttributedString {
+    public func attributedString(options: HTML.AttributedStringOptions = .default) -> NSMutableAttributedString {
         var attributes = [NSAttributedString.Key: Any]()
         attributes[.font] = options.font ?? .htmlDefault
 
-        let attributedString = NSMutableAttributedString(string: "")
+        let attributedString = NSMutableAttributedString()
         appendContents(to: attributedString, options: options, inheriting: attributes)
         return attributedString
     }
-
 }

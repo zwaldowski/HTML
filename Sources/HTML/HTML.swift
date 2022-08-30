@@ -1,5 +1,5 @@
 //
-//  HTMLDocument.swift
+//  HTML.swift
 //  HTML
 //
 //  Created by Zachary Waldowski on 2/19/19.
@@ -13,7 +13,7 @@ import CHTML
 
 /// A fragment of HTML parsed into a logical tree structure. A tree can have
 /// many child nodes but only one element, the root element.
-public final class HTMLDocument {
+public final class HTML {
     
     /// An error caused by the inability to parse malformed HTML.
     public struct ParseError: Error, CustomDebugStringConvertible {
@@ -34,7 +34,7 @@ public final class HTMLDocument {
         }
 
         /// A strong back-reference to the containing document.
-        public let document: HTMLDocument
+        public let document: HTML
         
         let handle: htmlNodePtr
     }
@@ -61,11 +61,11 @@ public final class HTMLDocument {
 
 }
 
-extension HTMLDocument {
+extension HTML {
 
     /// Parses the HTML contents of a string source, such as "<p>Hello.</p>"
     public static func parse<Input>(_ input: Input) throws -> Node where Input: StringProtocol {
-        let document = try HTMLDocument(parsing: input)
+        let document = try HTML(parsing: input)
         guard let root = document.root else { throw ParseError.lastError }
         return root
     }
@@ -80,7 +80,7 @@ extension HTMLDocument {
 
 // MARK: - Node
 
-extension HTMLDocument.Node {
+extension HTML.Node {
 
     /// The natural type of this element.
     /// See also [the W3C](http://www.w3.org/TR/REC-DOM-Level-1/).
@@ -111,7 +111,7 @@ extension HTMLDocument.Node {
 
 }
 
-extension HTMLDocument.Node: Collection {
+extension HTML.Node: Collection {
 
     enum IndexVariant: Equatable {
         case valid(htmlNodePtr, offset: Int)
@@ -127,9 +127,9 @@ extension HTMLDocument.Node: Collection {
         return Index(variant: .invalid)
     }
 
-    public subscript(position: Index) -> HTMLDocument.Node {
+    public subscript(position: Index) -> HTML.Node {
         guard case .valid(let handle, _) = position.variant else { preconditionFailure("Index out of bounds") }
-        return HTMLDocument.Node(document: document, handle: handle)
+        return HTML.Node(document: document, handle: handle)
     }
 
     public func index(after position: Index) -> Index {
@@ -141,7 +141,7 @@ extension HTMLDocument.Node: Collection {
 
 }
 
-extension HTMLDocument.Node: CustomDebugStringConvertible {
+extension HTML.Node: CustomDebugStringConvertible {
 
     public var debugDescription: String {
         let buffer = xmlBufferCreate()
@@ -153,7 +153,7 @@ extension HTMLDocument.Node: CustomDebugStringConvertible {
 
 }
 
-extension HTMLDocument.Node: CustomReflectable {
+extension HTML.Node: CustomReflectable {
 
     public var customMirror: Mirror {
         // Always use the debugDescription for `po`, none of this "▿" stuff.
@@ -164,7 +164,7 @@ extension HTMLDocument.Node: CustomReflectable {
 
 // MARK: - Node Kind
 
-extension HTMLDocument.Node.Kind {
+extension HTML.Node.Kind {
 
     /// Specifies an element node.
     public static let element = XML_ELEMENT_NODE
@@ -179,13 +179,13 @@ extension HTMLDocument.Node.Kind {
 
 // MARK: - Node Index
 
-extension HTMLDocument.Node.Index: Comparable {
+extension HTML.Node.Index: Comparable {
 
-    public static func == (lhs: HTMLDocument.Node.Index, rhs: HTMLDocument.Node.Index) -> Bool {
+    public static func == (lhs: HTML.Node.Index, rhs: HTML.Node.Index) -> Bool {
         return lhs.variant == rhs.variant
     }
 
-    public static func < (lhs: HTMLDocument.Node.Index, rhs: HTMLDocument.Node.Index) -> Bool {
+    public static func < (lhs: HTML.Node.Index, rhs: HTML.Node.Index) -> Bool {
         switch (lhs.variant, rhs.variant) {
         case (.valid(_, let lhs), .valid(_, let rhs)):
             return lhs < rhs
@@ -200,13 +200,13 @@ extension HTMLDocument.Node.Index: Comparable {
 
 // MARK: - Parse Errors
 
-extension HTMLDocument.ParseError {
+extension HTML.ParseError {
     
     static var lastError: Error {
         guard let error = xmlGetLastError() else {
-            return HTMLDocument.ParseError(code: -1, debugDescription: "")
+            return HTML.ParseError(code: -1, debugDescription: "")
         }
-        return HTMLDocument.ParseError(code: Int(error.pointee.code), debugDescription: String(cString: error.pointee.message))
+        return HTML.ParseError(code: Int(error.pointee.code), debugDescription: String(cString: error.pointee.message))
     }
     
 }
