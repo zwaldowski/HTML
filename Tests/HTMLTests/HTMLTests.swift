@@ -9,23 +9,6 @@ import HTML
 import XCTest
 
 class HTMLTests: XCTestCase {
-    
-    static let allTests = [
-        ("testAttributes", testAttributes),
-        ("testCollectionCount", testCollectionCount),
-        ("testCollectionFirst", testCollectionFirst),
-        ("testCollectionIsEmpty", testCollectionIsEmpty),
-        ("testContentForEmptyElement", testContentForEmptyElement),
-        ("testDebugDescription", testDebugDescription),
-        ("testDocumentReflection", testDocumentReflection),
-        ("testDoesNotParseEmptyString", testDoesNotParseEmptyString),
-        ("testDoesNotParseInvalidTag", testDoesNotParseInvalidTag),
-        ("testKind", testKind),
-        ("testName", testName),
-        ("testParsesTextFragment", testParsesTextFragment),
-        ("testReflection", testReflection),
-    ]
-    
     func loadFixture() throws -> HTML.Node {
         return try HTML.parse(xml_dot_html)
     }
@@ -140,5 +123,4 @@ class HTMLTests: XCTestCase {
         XCTAssertNil(magicMirror.superclassMirror)
         XCTAssertNil(magicMirror.descendant(0, 0, 2, 0))
     }
-
 }

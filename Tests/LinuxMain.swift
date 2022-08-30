@@ -1,7 +1,1 @@
-import XCTest
-
-import HTMLTests
-
-var tests = [XCTestCaseEntry]()
-tests += HTMLTests.allTests()
-XCTMain(tests)
+fatalError("Run with `swift test --enable-test-discovery`")
