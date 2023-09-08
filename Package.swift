@@ -1,10 +1,10 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.8
 
 import PackageDescription
 
 let package = Package(
     name: "HTML",
-    platforms: [ .iOS(.v15), .macCatalyst(.v15), .macOS(.v12), .tvOS(.v15) ],
+    platforms: [ .iOS(.v16), .macCatalyst(.v16), .macOS(.v13), .tvOS(.v16), .watchOS(.v7) ],
     products: [
         .library(
             name: "HTMLAttributedString",

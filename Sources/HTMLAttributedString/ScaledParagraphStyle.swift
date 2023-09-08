@@ -2,15 +2,10 @@ import SwiftUI
 
 /// An adaptive paragraph style that aligns tab stops based on the user's current display preferences.
 public class ScaledParagraphStyle: NSMutableParagraphStyle {
-    /// Creates a hanging indent matching the tab interval.
-    public static let headIndentUseFirstTabLocation = CGFloat(-1)
-
     /// Creates a paragraph style with the attributes of the specified paragraph style.
-    public convenience init(paragraphStyle: NSParagraphStyle?) {
+    public convenience init(paragraphStyle: NSParagraphStyle) {
         self.init()
-        if let paragraphStyle {
-            setParagraphStyle(paragraphStyle)
-        }
+        setParagraphStyle(paragraphStyle)
     }
 
     /// The indentation of the paragraph’s lines other than the first.
@@ -18,17 +13,12 @@ public class ScaledParagraphStyle: NSMutableParagraphStyle {
     /// Use the ``ScaledParagraphStyle/headIndentUseFirstTabLocation`` constant to create a hanging indent.
     public override var headIndent: CGFloat {
         get {
-            switch unscaledHeadIndent {
-            case Self.headIndentUseFirstTabLocation:
-                // Apply a hanging indent.
-                #if canImport(UIKit)
-                return UITraitCollection.current.preferredContentSizeCategory.isAccessibilityCategory ? 0 : defaultTabInterval
-                #else
-                return defaultTabInterval
-                #endif
-            case let other:
-                return other
-            }
+            #if canImport(UIKit)
+            // Apply a hanging indent.
+            UITraitCollection.current.preferredContentSizeCategory.isAccessibilityCategory ? 0 : UIFontMetrics.default.scaledValue(for: unscaledHeadIndent)
+            #else
+            unscaledHeadIndent
+            #endif
         }
         set {
             super.headIndent = newValue
@@ -71,6 +61,11 @@ public class ScaledParagraphStyle: NSMutableParagraphStyle {
         guard let other = other as? Self else { return }
         defaultTabInterval = other.unscaledDefaultTabInterval
         headIndent = other.unscaledHeadIndent
+    }
+
+    /// Returns a new instance with the same property values.
+    public override func mutableCopy(with zone: NSZone? = nil) -> Any {
+        ScaledParagraphStyle(paragraphStyle: self)
     }
 
     var unscaledDefaultTabInterval: CGFloat {

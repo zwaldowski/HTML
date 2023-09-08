@@ -27,6 +27,56 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
         ])
     }
 
+    #if canImport(UIKit)
+    func testSyntaxUIKit() {
+        let text = AttributedString(html: #"""
+                Neque <b>vestibulum,
+
+            <i>turpis</i>!</b><br />
+            """#, options: .uiKit)
+
+        XCTAssertEqual(String(text.characters), """
+            Neque vestibulum, turpis!
+
+            """)
+        XCTAssertEqual(text.runs[\.presentationIntent].map(\.0), [
+            nil
+        ])
+        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
+            nil,
+            .stronglyEmphasized,
+            [ .stronglyEmphasized, .emphasized ],
+            .stronglyEmphasized,
+            .lineBreak
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testSyntaxAppKit() {
+        let text = AttributedString(html: #"""
+                Neque <b>vestibulum,
+
+            <i>turpis</i>!</b><br />
+            """#, options: .appKit)
+
+        XCTAssertEqual(String(text.characters), """
+            Neque vestibulum, turpis!
+
+            """)
+        XCTAssertEqual(text.runs[\.presentationIntent].map(\.0), [
+            nil
+        ])
+        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
+            nil,
+            .stronglyEmphasized,
+            [ .stronglyEmphasized, .emphasized ],
+            .stronglyEmphasized,
+            .lineBreak
+        ])
+    }
+    #endif
+
     func testSyntaxInlineOnly() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .inlineOnly)
         let text = AttributedString(html: #"""
@@ -273,6 +323,44 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             """)
     }
 
+    #if canImport(UIKit)
+    func testOrderedListUIKit() {
+        let text = AttributedString(html: #"""
+            <ol start="5"><li>a
+            </li>
+            <li>b</li></ol>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            5.\ta
+            6.\tb
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testOrderedListAppKit() {
+        let text = AttributedString(html: #"""
+            <ol start="5"><li>a
+            </li>
+            <li>b</li></ol>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            5.\ta
+            6.\tb
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
+
     func testUnorderedList() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full)
         let text = AttributedString(html: #"""
@@ -329,6 +417,40 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             • item 3
             """)
     }
+
+    #if canImport(UIKit)
+    func testUnorderedListUIKit() {
+        let text = AttributedString(html: #"""
+            <ul><li>a</li><li>b</li></ul>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            •\ta
+            •\tb
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testUnorderedListAppKit() {
+        let text = AttributedString(html: #"""
+            <ul><li>a</li><li>b</li></ul>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            •\ta
+            •\tb
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
 
     func testListItemsNotInAList() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full)
@@ -414,6 +536,82 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             """)
     }
 
+    #if canImport(UIKit)
+    func testNestedListUIKit() {
+        let text = AttributedString(html: #"""
+            <ol>
+                <li>  This is a list item.
+                    <ul><li>This is a nested item.</li><li>This is another test item.</li></ul>
+                    </li>
+                <li>  This is another list item.  </li>
+            </ol>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+        1.\tThis is a list item.
+        \t•\tThis is a nested item.
+        \t•\tThis is another test item.
+        2.\tThis is another list item.
+        """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testNestedListAppKit() {
+        let text = AttributedString(html: #"""
+            <ol>
+                <li>  This is a list item.
+                    <ul><li>This is a nested item.</li><li>This is another test item.</li></ul>
+                    </li>
+                <li>  This is another list item.  </li>
+            </ol>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+        1.\tThis is a list item.
+        \t•\tThis is a nested item.
+        \t•\tThis is another test item.
+        2.\tThis is another list item.
+        """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4, headIndent: 28)
+        ])
+    }
+    #endif
+
+    #if canImport(UIKit)
+    func testFullParagraphCenteredUIKit() {
+        let text = AttributedString(html: #"""
+            <center><p>Hello</p></center>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), "Hello")
+        XCTAssertNil(text.center)
+        XCTAssertEqual(text.paragraphStyleIntent?.alignment, .center)
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testFullParagraphCenteredUIKit() {
+        let text = AttributedString(html: #"""
+            <center><p>Hello</p></center>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), "Hello")
+        XCTAssertNil(text.center)
+        XCTAssertEqual(text.paragraphStyleIntent?.alignment, .center)
+    }
+    #endif
+
     func testFullParagraphCentered() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full)
         let text = AttributedString(html: #"""
@@ -487,6 +685,42 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
         ])
     }
 
+    #if canImport(UIKit)
+    func testKeyedArchivalOfBoldString() throws {
+        let html = #"<b>All AppleCare NOC analysts are busy taking other chats. An AppleCare NOC analyst will join this chat shortly.</b><br><b>Thank you for your patience.</b><br>"#
+        let text = NSAttributedString(html: html, options: .uiKit)
+        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
+        XCTAssertFalse(data.isEmpty)
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testKeyedArchivalOfBoldString() throws {
+        let html = #"<b>All AppleCare NOC analysts are busy taking other chats. An AppleCare NOC analyst will join this chat shortly.</b><br><b>Thank you for your patience.</b><br>"#
+        let text = NSAttributedString(html: html, options: .appKit)
+        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
+        XCTAssertFalse(data.isEmpty)
+    }
+    #endif
+
+    #if canImport(UIKit)
+    func testEncodingOfItalicString() throws {
+        let html = #"All AppleCare <i>NOC</i> analysts are busy taking other chats. An AppleCare <i>NOC</i> analyst will join this chat shortly.<br>Thank you for your patience.<br>"#
+        let text = NSAttributedString(html: html, options: .uiKit)
+        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
+        XCTAssertFalse(data.isEmpty)
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testEncodingOfItalicString() throws {
+        let html = #"All AppleCare <i>NOC</i> analysts are busy taking other chats. An AppleCare <i>NOC</i> analyst will join this chat shortly.<br>Thank you for your patience.<br>"#
+        let text = NSAttributedString(html: html, options: .appKit)
+        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
+        XCTAssertFalse(data.isEmpty)
+    }
+    #endif
+
     func testParagraphs() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full)
         let text = AttributedString(html: #"""
@@ -510,6 +744,145 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             PresentationIntent(.paragraph, identity: 3)
         ])
     }
+
+    #if canImport(UIKit)
+    func testParagraphsUIKit() {
+        let text = AttributedString(html: #"""
+            <strong>It’s Not a Charge</strong>
+            <p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p>
+            <strong>How it is Released</strong>
+            <p>Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p>
+            <strong>Shipping Delays</strong>
+            <p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            It’s Not a Charge
+            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
+
+            How it is Released
+            Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.
+
+            Shipping Delays
+            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4)
+        ])
+        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
+            .unspecified,
+            nil,
+            .unspecified,
+            nil,
+            .unspecified,
+            nil
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testParagraphsAppKit() {
+        let text = AttributedString(html: #"""
+            <strong>It’s Not a Charge</strong>
+            <p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p>
+            <strong>How it is Released</strong>
+            <p>Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p>
+            <strong>Shipping Delays</strong>
+            <p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            It’s Not a Charge
+            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
+
+            How it is Released
+            Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.
+
+            Shipping Delays
+            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4)
+        ])
+        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
+            .unspecified,
+            nil,
+            .unspecified,
+            nil,
+            .unspecified,
+            nil
+        ])
+    }
+    #endif
+
+    #if canImport(UIKit)
+    func testParagraphHeadingsForMinifiedHTML_79338354() {
+        let text = AttributedString(html: #"<strong>It’s Not a Charge</strong><p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p><strong>A Credit Card is Recommended</strong><p>It’s recommended that you use a credit card. If you use a debit card, it will appear as a temporary transaction, which could affect other transactions until the hold is released.</p><strong>How it is Released</strong><p>Once you receive your replacement, just send your original back within 10 business days of your request. Once it arrives at Apple, Apple will process your device, then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p><strong>If Your Device is Ineligible for Service</strong><p>If your device is inoperable due to unauthorized modifications or severe damage, the temporary hold will be charged to your card.</p><strong>Shipping Delays</strong><p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>"#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            It’s Not a Charge
+            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
+
+            A Credit Card is Recommended
+            It’s recommended that you use a credit card. If you use a debit card, it will appear as a temporary transaction, which could affect other transactions until the hold is released.
+
+            How it is Released
+            Once you receive your replacement, just send your original back within 10 business days of your request. Once it arrives at Apple, Apple will process your device, then release the hold. Shipping and processing of your device tends to take 2-3 days total.
+
+            If Your Device is Ineligible for Service
+            If your device is inoperable due to unauthorized modifications or severe damage, the temporary hold will be charged to your card.
+
+            Shipping Delays
+            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4)
+        ])
+        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
+            .stronglyEmphasized,
+            nil,
+            .stronglyEmphasized,
+            nil,
+            .stronglyEmphasized,
+            nil,
+            .stronglyEmphasized,
+            nil,
+            .stronglyEmphasized,
+            nil
+        ])
+        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
+            .unspecified,
+            nil,
+            .unspecified,
+            nil,
+            .unspecified,
+            nil,
+            .unspecified,
+            nil,
+            .unspecified,
+            nil
+        ])
+    }
+    #endif
 
     func testHeadings() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full)
@@ -546,6 +919,239 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             PresentationIntent(.paragraph, identity: 12)
         ])
     }
+
+    #if canImport(UIKit)
+    func testHeadingsUIKit() {
+        let text = AttributedString(html: #"""
+            <h1>Sed Dui Tellus</h1>
+            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
+            <h2>Nam Suscipit Tincidunt Nisl</h2>
+            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
+            <h3>In Hac Habitasse Platea</h3>
+            <p>Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.</p>
+            <h4>Class Aptent Taciti Sociosqu</h4>
+            <p>Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.</p>
+            <h5>Maecenas Sit Amet Porttitor</h5>
+            <p>Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.</p>
+            <h6>Mauris Ac Dui Finibus</h6>
+            <p>Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.</p>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            Sed Dui Tellus
+            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
+
+            Nam Suscipit Tincidunt Nisl
+            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
+
+            In Hac Habitasse Platea
+            Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.
+
+            Class Aptent Taciti Sociosqu
+            Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.
+
+            Maecenas Sit Amet Porttitor
+            Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.
+
+            Mauris Ac Dui Finibus
+            Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4)
+        ])
+        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil
+        ])
+        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
+            .h1, nil,
+            .h2, nil,
+            .h3, nil,
+            .h4, nil,
+            .h5, nil,
+            .h6, nil
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testHeadingsAppKit() {
+        let text = AttributedString(html: #"""
+            <h1>Sed Dui Tellus</h1>
+            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
+            <h2>Nam Suscipit Tincidunt Nisl</h2>
+            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
+            <h3>In Hac Habitasse Platea</h3>
+            <p>Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.</p>
+            <h4>Class Aptent Taciti Sociosqu</h4>
+            <p>Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.</p>
+            <h5>Maecenas Sit Amet Porttitor</h5>
+            <p>Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.</p>
+            <h6>Mauris Ac Dui Finibus</h6>
+            <p>Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.</p>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(String(text.characters), """
+            Sed Dui Tellus
+            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
+
+            Nam Suscipit Tincidunt Nisl
+            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
+
+            In Hac Habitasse Platea
+            Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.
+
+            Class Aptent Taciti Sociosqu
+            Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.
+
+            Maecenas Sit Amet Porttitor
+            Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.
+
+            Mauris Ac Dui Finibus
+            Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.
+            """)
+        XCTAssertEqual(text.runs[\.paragraphStyleIntent].map(\.0), [
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4), nil,
+            AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute(paragraphSpacing: 4)
+        ])
+        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil,
+            .stronglyEmphasized, nil
+        ])
+        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
+            .h1, nil,
+            .h2, nil,
+            .h3, nil,
+            .h4, nil,
+            .h5, nil,
+            .h6, nil
+        ])
+    }
+    #endif
+
+    #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+    func testIntentsConvertedToParagraphStyles() {
+        let text = NSAttributedString(html: #"""
+            <h1>Sed Dui Tellus</h1>
+            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
+            <h2>Nam Suscipit Tincidunt Nisl</h2>
+            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
+            """#, options: .uiKitParagraphs)
+
+        XCTAssertEqual(text.string, """
+            Sed Dui Tellus
+            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
+
+            Nam Suscipit Tincidunt Nisl
+            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
+            """)
+
+        var range = NSRange(0 ..< 0)
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 0, effectiveRange: &range))
+        XCTAssertEqual(text.attribute(.accessibilityTextHeadingLevel, at: 0, effectiveRange: &range) as? Int, 1)
+        XCTAssertEqual(text.attribute(.inlinePresentationIntent, at: 0, effectiveRange: &range) as? UInt, InlinePresentationIntent.stronglyEmphasized.rawValue)
+        XCTAssertEqual(range, NSRange(0 ..< 14))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 14, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.accessibilityTextHeadingLevel, at: 14, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 14, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(14 ..< 15))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 15, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.accessibilityTextHeadingLevel, at: 15, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 15, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(15 ..< 99))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 99, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.accessibilityTextHeadingLevel, at: 99, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 99, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(99 ..< 101))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 101, effectiveRange: &range))
+        XCTAssertEqual(text.attribute(.accessibilityTextHeadingLevel, at: 101, effectiveRange: &range) as? Int, 2)
+        XCTAssertEqual(text.attribute(.inlinePresentationIntent, at: 101, effectiveRange: &range) as? UInt, InlinePresentationIntent.stronglyEmphasized.rawValue)
+        XCTAssertEqual(range, NSRange(101 ..< 128))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 128, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.accessibilityTextHeadingLevel, at: 128, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 128, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(128 ..< 129))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 129, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.accessibilityTextHeadingLevel, at: 129, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 129, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(129 ..< 207))
+
+        XCTAssertThrowsError(try AttributedString(text, including: \.html))
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testIntentsConvertedToParagraphStyles() {
+        let text = NSAttributedString(html: #"""
+            <h1>Sed Dui Tellus</h1>
+            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
+            <h2>Nam Suscipit Tincidunt Nisl</h2>
+            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
+            """#, options: .appKitParagraphs)
+
+        XCTAssertEqual(text.string, """
+            Sed Dui Tellus
+            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
+
+            Nam Suscipit Tincidunt Nisl
+            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
+            """)
+
+        var range = NSRange(0 ..< 0)
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 0, effectiveRange: &range))
+        XCTAssertEqual(text.attribute(.inlinePresentationIntent, at: 0, effectiveRange: &range) as? UInt, InlinePresentationIntent.stronglyEmphasized.rawValue)
+        XCTAssertEqual(range, NSRange(0 ..< 14))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 14, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 14, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(14 ..< 15))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 15, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 15, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(15 ..< 99))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 99, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 99, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(99 ..< 101))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 101, effectiveRange: &range))
+        XCTAssertEqual(text.attribute(.inlinePresentationIntent, at: 101, effectiveRange: &range) as? UInt, InlinePresentationIntent.stronglyEmphasized.rawValue)
+        XCTAssertEqual(range, NSRange(101 ..< 128))
+        XCTAssertNil(text.attribute(.paragraphStyle, at: 128, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 128, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(128 ..< 129))
+        XCTAssertNotNil(text.attribute(.paragraphStyle, at: 129, effectiveRange: &range))
+        XCTAssertNil(text.attribute(.inlinePresentationIntent, at: 129, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(129 ..< 207))
+
+        XCTAssertThrowsError(try AttributedString(text, including: \.html))
+    }
+    #endif
 
     func testSearchHighlightingAndWhitespace() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .full, mark: .stronglyEmphasized)
@@ -620,272 +1226,7 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
         ])
     }
 
-    func testPlainText() {
-        let text = String(html: #"""
-            <p>
-                This is a test paragraph
-            </p>
-            <p>This is another test paragraph</p>
-            <ul>
-                <li>This is a test item</li>
-                <li>This is another test item</li>
-            </ul>
-            """#)
-        XCTAssertEqual(text, """
-            This is a test paragraph
-            This is another test paragraph
-            • This is a test item
-            • This is another test item
-            """)
-    }
-
-    func testPlainTextPreservingWhitespace() {
-        let text = String(html: #"""
-                Neque <b>vestibulum,
-
-            <i>turpis</i>!</b><br />
-            """#, preservingWhitespace: true)
-        XCTAssertEqual(text, """
-            Neque vestibulum,
-
-            turpis!
-
-            """)
-    }
-
-    // MARK: - UIKit
-
     #if canImport(UIKit)
-    func testSyntaxUIKit() {
-        let text = AttributedString(html: #"""
-                Neque <b>vestibulum,
-
-            <i>turpis</i>!</b><br />
-            """#, options: .uiKit)
-
-        XCTAssertEqual(String(text.characters), """
-            Neque vestibulum, turpis!
-
-            """)
-        XCTAssertEqual(text.runs[\.presentationIntent].map(\.0), [
-            nil
-        ])
-        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
-            nil,
-            .stronglyEmphasized,
-            [ .stronglyEmphasized, .emphasized ],
-            .stronglyEmphasized,
-            .lineBreak
-        ])
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 1)
-    }
-
-    func testOrderedListUIKit() {
-        let text = AttributedString(html: #"""
-            <ol start="5"><li>a
-            </li>
-            <li>b</li></ol>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            5.\ta
-            6.\tb
-            """)
-        let paragraphStyles = text.runs[\.paragraphStyle].map(\.0)
-        XCTAssertEqual(paragraphStyles.count, 3)
-        XCTAssertNotEqual(paragraphStyles[0]?.defaultTabInterval, 0)
-        XCTAssertNil(paragraphStyles[1])
-        XCTAssertNotEqual(paragraphStyles[2]?.defaultTabInterval, 0)
-    }
-
-    func testUnorderedListUIKit() {
-        let text = AttributedString(html: #"""
-            <ul><li>a</li><li>b</li></ul>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            •\ta
-            •\tb
-            """)
-        let paragraphStyles = text.runs[\.paragraphStyle].map(\.0)
-        XCTAssertEqual(paragraphStyles.count, 3)
-        XCTAssertNotEqual(paragraphStyles[0]?.defaultTabInterval, 0)
-        XCTAssertNil(paragraphStyles[1])
-        XCTAssertNotEqual(paragraphStyles[2]?.defaultTabInterval, 0)
-    }
-
-    func testNestedListUIKit() {
-        let text = AttributedString(html: #"""
-            <ol>
-                <li>  This is a list item.
-                    <ul><li>This is a nested item.</li><li>This is another test item.</li></ul>
-                    </li>
-                <li>  This is another list item.  </li>
-            </ol>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-        1.\tThis is a list item.
-        \t•\tThis is a nested item.
-        \t•\tThis is another test item.
-        2.\tThis is another list item.
-        """)
-    }
-
-    func testFullParagraphCenteredUIKit() {
-        let text = AttributedString(html: #"""
-            <center><p>Hello</p></center>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), "Hello")
-        XCTAssertEqual(text.paragraphStyle?.alignment, .center)
-    }
-
-    func testKeyedArchivalOfBoldString() throws {
-        let html = #"<b>All AppleCare NOC analysts are busy taking other chats. An AppleCare NOC analyst will join this chat shortly.</b><br><b>Thank you for your patience.</b><br>"#
-        let text = NSAttributedString(html: html, options: .uiKit)
-        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
-        XCTAssertFalse(data.isEmpty)
-    }
-
-    func testEncodingOfItalicString() throws {
-        let html = #"All AppleCare <i>NOC</i> analysts are busy taking other chats. An AppleCare <i>NOC</i> analyst will join this chat shortly.<br>Thank you for your patience.<br>"#
-        let text = NSAttributedString(html: html, options: .uiKit)
-        let data = try NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)
-        XCTAssertFalse(data.isEmpty)
-    }
-
-    func testParagraphsUIKit() {
-        let text = AttributedString(html: #"""
-            <strong>It’s Not a Charge</strong>
-            <p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p>
-            <strong>How it is Released</strong>
-            <p>Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p>
-            <strong>Shipping Delays</strong>
-            <p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            It’s Not a Charge
-            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
-
-            How it is Released
-            Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.
-
-            Shipping Delays
-            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
-            """)
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 11)
-        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
-            .unspecified,
-            nil,
-            .unspecified,
-            nil,
-            .unspecified,
-            nil
-        ])
-    }
-
-    func testParagraphHeadingsUIKitForMinifiedHTML_79338354() {
-        let text = AttributedString(html: #"<strong>It’s Not a Charge</strong><p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p><strong>A Credit Card is Recommended</strong><p>It’s recommended that you use a credit card. If you use a debit card, it will appear as a temporary transaction, which could affect other transactions until the hold is released.</p><strong>How it is Released</strong><p>Once you receive your replacement, just send your original back within 10 business days of your request. Once it arrives at Apple, Apple will process your device, then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p><strong>If Your Device is Ineligible for Service</strong><p>If your device is inoperable due to unauthorized modifications or severe damage, the temporary hold will be charged to your card.</p><strong>Shipping Delays</strong><p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>"#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            It’s Not a Charge
-            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
-
-            A Credit Card is Recommended
-            It’s recommended that you use a credit card. If you use a debit card, it will appear as a temporary transaction, which could affect other transactions until the hold is released.
-
-            How it is Released
-            Once you receive your replacement, just send your original back within 10 business days of your request. Once it arrives at Apple, Apple will process your device, then release the hold. Shipping and processing of your device tends to take 2-3 days total.
-
-            If Your Device is Ineligible for Service
-            If your device is inoperable due to unauthorized modifications or severe damage, the temporary hold will be charged to your card.
-
-            Shipping Delays
-            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
-            """)
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 19)
-        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
-            .stronglyEmphasized,
-            nil,
-            .stronglyEmphasized,
-            nil,
-            .stronglyEmphasized,
-            nil,
-            .stronglyEmphasized,
-            nil,
-            .stronglyEmphasized,
-            nil
-        ])
-        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
-            .unspecified,
-            nil,
-            .unspecified,
-            nil,
-            .unspecified,
-            nil,
-            .unspecified,
-            nil,
-            .unspecified,
-            nil
-        ])
-    }
-
-    func testHeadingsUIKit() {
-        let text = AttributedString(html: #"""
-            <h1>Sed Dui Tellus</h1>
-            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
-            <h2>Nam Suscipit Tincidunt Nisl</h2>
-            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
-            <h3>In Hac Habitasse Platea</h3>
-            <p>Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.</p>
-            <h4>Class Aptent Taciti Sociosqu</h4>
-            <p>Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.</p>
-            <h5>Maecenas Sit Amet Porttitor</h5>
-            <p>Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.</p>
-            <h6>Mauris Ac Dui Finibus</h6>
-            <p>Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.</p>
-            """#, options: .uiKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            Sed Dui Tellus
-            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
-
-            Nam Suscipit Tincidunt Nisl
-            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
-
-            In Hac Habitasse Platea
-            Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.
-
-            Class Aptent Taciti Sociosqu
-            Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.
-
-            Maecenas Sit Amet Porttitor
-            Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.
-
-            Mauris Ac Dui Finibus
-            Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.
-            """)
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 23)
-        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil
-        ])
-        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
-            .h1, nil,
-            .h2, nil,
-            .h3, nil,
-            .h4, nil,
-            .h5, nil,
-            .h6, nil
-        ])
-    }
-
     func testSymbolsReplaceImageURLs() {
         let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .inlineOnly, image: .uiKitSymbols)
         let text = AttributedString(html: #"""
@@ -905,13 +1246,13 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
         XCTAssertEqual(text.runs[\.imageURL].map(\.0), [
             nil
         ])
-        XCTAssertEqual(text.runs[\.attachment].map(\.0?.image), [
+        XCTAssertEqual(text.runs[\.attachmentIntent].map(\.0?.name), [
             nil,
-            UIImage(systemName: "bolt.car"),
+            "bolt.car",
             nil,
-            UIImage(systemName: "bus.fill"),
+            "bus.fill",
             nil,
-            UIImage(systemName: "bicycle"),
+            "bicycle",
             nil
         ])
     }
@@ -930,9 +1271,9 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             • \u{fffc} Scooter
             • \u{fffc} Hydrogen-powered airship
             """)
-        XCTAssertEqual(text.runs[\.attachment].map(\.0?.image), [
+        XCTAssertEqual(text.runs[\.attachmentIntent].map(\.0?.name), [
             nil,
-            UIImage(systemName: "scooter"),
+            "scooter",
             nil
         ])
         XCTAssertEqual(text.runs[\.imageURL].map(\.0?.absoluteString), [
@@ -968,15 +1309,53 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             \u{fffc}\tHitchhiking
             \u{fffc}\tCablecar
             """)
-        XCTAssertEqual(text.runs[\.attachment].map(\.0?.image), [
+        XCTAssertEqual(text.runs[\.attachmentIntent].map(\.0?.name), [
             nil,
-            UIImage(systemName: "figure.wave"),
+            "figure.wave",
             nil,
-            UIImage(systemName: "cablecar"),
+            "cablecar",
             nil
         ])
     }
 
+    func testSymbolsConvertedToAttachments() {
+        let options = AttributedString.HTMLParsingOptions(interpretedSyntax: .inlineOnly, image: .uiKitSymbols)
+        let text = NSAttributedString(html: #"""
+            <h3>Recommended forms of transportation</h3>
+            <ul>
+            <li><img src="bolt.car"> Electric vehicle</li>
+            <li><img src="bus.fill"> Bus</li>
+            <li><img src="bicycle"> Bike</li>
+            </ul>
+            """#, options: options)
+        XCTAssertEqual(text.string, """
+            Recommended forms of transportation
+            • ￼ Electric vehicle
+            • ￼ Bus
+            • ￼ Bike
+            """)
+
+        var range = NSRange(0 ..< 0)
+        XCTAssertNil(text.attribute(.attachment, at: 0, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(0 ..< 38))
+        XCTAssertNotNil(text.attribute(.attachment, at: 38, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(38 ..< 39))
+        XCTAssertNil(text.attribute(.attachment, at: 39, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(39 ..< 59))
+        XCTAssertNotNil(text.attribute(.attachment, at: 59, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(59 ..< 60))
+        XCTAssertNil(text.attribute(.attachment, at: 60, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(60 ..< 67))
+        XCTAssertNotNil(text.attribute(.attachment, at: 67, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(67 ..< 68))
+        XCTAssertNil(text.attribute(.attachment, at: 68, effectiveRange: &range))
+        XCTAssertEqual(range, NSRange(68 ..< 73))
+
+        XCTAssertThrowsError(try AttributedString(text, including: \.html))
+    }
+    #endif
+
+    #if canImport(UIKit)
     func testColorsUIKit() {
         let text = AttributedString(html: #"""
             <p style="color:primary">Lorem ipsum dolor sit amet.</p>
@@ -1006,200 +1385,9 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             nil
         ])
     }
-
-    func testMarkUIKit() {
-        let options = AttributedString.HTMLParsingOptions.uiKit
-            .set(\.mark, .uiKitSecondaryColor)
-        let text = AttributedString(html: #"""
-            Pellentesque <mark>posuere</mark> risus <mark>vitae</mark> tortor commodo.
-            """#, options: options)
-
-        XCTAssertEqual(String(text.characters), """
-            Pellentesque posuere risus vitae tortor commodo.
-            """)
-        XCTAssertEqual(text.runs[\.foregroundColor].map(\.0), [
-            .secondaryLabel,
-            nil,
-            .secondaryLabel,
-            nil,
-            .secondaryLabel
-        ])
-    }
     #endif
 
-    // MARK: - AppKit
-
     #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-    func testSyntaxAppKit() {
-        let text = AttributedString(html: #"""
-                Neque <b>vestibulum,
-
-            <i>turpis</i>!</b><br />
-            """#, options: .appKit)
-
-        XCTAssertEqual(String(text.characters), """
-            Neque vestibulum, turpis!
-
-            """)
-        XCTAssertEqual(text.runs[\.presentationIntent].map(\.0), [
-            nil
-        ])
-        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
-            nil,
-            .stronglyEmphasized,
-            [ .stronglyEmphasized, .emphasized ],
-            .stronglyEmphasized,
-            .lineBreak
-        ])
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 1)
-    }
-
-    func testOrderedListAppKit() {
-        let text = AttributedString(html: #"""
-            <ol start="5"><li>a
-            </li>
-            <li>b</li></ol>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            5.\ta
-            6.\tb
-            """)
-        let paragraphStyles = text.runs[\.paragraphStyle].map(\.0)
-        XCTAssertEqual(paragraphStyles.count, 3)
-        XCTAssertNotEqual(paragraphStyles[0]?.defaultTabInterval, 0)
-        XCTAssertNil(paragraphStyles[1])
-        XCTAssertNotEqual(paragraphStyles[2]?.defaultTabInterval, 0)
-    }
-
-    func testUnorderedListAppKit() {
-        let text = AttributedString(html: #"""
-            <ul><li>a</li><li>b</li></ul>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            •\ta
-            •\tb
-            """)
-        let paragraphStyles = text.runs[\.paragraphStyle].map(\.0)
-        XCTAssertEqual(paragraphStyles.count, 3)
-        XCTAssertNotEqual(paragraphStyles[0]?.defaultTabInterval, 0)
-        XCTAssertNil(paragraphStyles[1])
-        XCTAssertNotEqual(paragraphStyles[2]?.defaultTabInterval, 0)
-    }
-
-    func testNestedListAppKit() {
-        let text = AttributedString(html: #"""
-            <ol>
-                <li>  This is a list item.
-                    <ul><li>This is a nested item.</li><li>This is another test item.</li></ul>
-                    </li>
-                <li>  This is another list item.  </li>
-            </ol>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-        1.\tThis is a list item.
-        \t•\tThis is a nested item.
-        \t•\tThis is another test item.
-        2.\tThis is another list item.
-        """)
-    }
-
-    func testFullParagraphCenteredAppKit() {
-        let text = AttributedString(html: #"""
-            <center><p>Hello</p></center>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), "Hello")
-        XCTAssertEqual(text.paragraphStyle?.alignment, .center)
-    }
-
-    func testParagraphsAppKit() {
-        let text = AttributedString(html: #"""
-            <strong>It’s Not a Charge</strong>
-            <p>This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.</p>
-            <strong>How it is Released</strong>
-            <p>Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.</p>
-            <strong>Shipping Delays</strong>
-            <p>Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.</p>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            It’s Not a Charge
-            This is a temporary hold to cover the replacement value of your product. It won’t affect your available balance.
-
-            How it is Released
-            Once you receive your replacement, just send your original back within 10 business days. Once it arrives at Apple, Apple will process your device then release the hold. Shipping and processing of your device tends to take 2-3 days total.
-
-            Shipping Delays
-            Once you ship your device, Apple will monitor its progress. You won’t be penalized for any shipping issues or delays.
-            """)
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 11)
-        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
-            .unspecified,
-            nil,
-            .unspecified,
-            nil,
-            .unspecified,
-            nil
-        ])
-    }
-
-    func testHeadingsAppKit() {
-        let text = AttributedString(html: #"""
-            <h1>Sed Dui Tellus</h1>
-            <p>Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.</p>
-            <h2>Nam Suscipit Tincidunt Nisl</h2>
-            <p>Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.</p>
-            <h3>In Hac Habitasse Platea</h3>
-            <p>Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.</p>
-            <h4>Class Aptent Taciti Sociosqu</h4>
-            <p>Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.</p>
-            <h5>Maecenas Sit Amet Porttitor</h5>
-            <p>Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.</p>
-            <h6>Mauris Ac Dui Finibus</h6>
-            <p>Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.</p>
-            """#, options: .appKitParagraphs)
-
-        XCTAssertEqual(String(text.characters), """
-            Sed Dui Tellus
-            Vestibulum venenatis in tortor sit amet imperdiet. Orci varius natoque penatibus et.
-
-            Nam Suscipit Tincidunt Nisl
-            Vivamus tempor ex neque, nec commodo mi sollicitudin id. Donec vestibulum vel.
-
-            In Hac Habitasse Platea
-            Sed viverra semper tellus a fermentum. Maecenas lacinia, metus non maximus egestas.
-
-            Class Aptent Taciti Sociosqu
-            Sed diam elit, fermentum nec tellus imperdiet, sodales sodales nisi. Etiam nec.
-
-            Maecenas Sit Amet Porttitor
-            Vivamus pharetra arcu vel dictum rutrum. Nulla at facilisis lectus, id porttitor.
-
-            Mauris Ac Dui Finibus
-            Donec eget fringilla eros. Sed nec arcu eget nibh euismod rhoncus a.
-            """)
-        XCTAssertEqual(text.runs[\.paragraphStyle].count, 23)
-        XCTAssertEqual(text.runs[\.inlinePresentationIntent].map(\.0), [
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil,
-            .stronglyEmphasized, nil
-        ])
-        XCTAssertEqual(text.runs[\.accessibilityHeadingLevel].map(\.0), [
-            .h1, nil,
-            .h2, nil,
-            .h3, nil,
-            .h4, nil,
-            .h5, nil,
-            .h6, nil
-        ])
-    }
-
     func testColorsAppKit() {
         let text = AttributedString(html: #"""
             <p style="color:primary">Lorem ipsum dolor sit amet.</p>
@@ -1229,28 +1417,7 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             nil
         ])
     }
-
-    func testMarkAppKit() {
-        let options = AttributedString.HTMLParsingOptions.appKit
-            .set(\.mark, .appKitSecondaryColor)
-        let text = AttributedString(html: #"""
-            Pellentesque <mark>posuere</mark> risus <mark>vitae</mark> tortor commodo.
-            """#, options: options)
-
-        XCTAssertEqual(String(text.characters), """
-            Pellentesque posuere risus vitae tortor commodo.
-            """)
-        XCTAssertEqual(text.runs[\.foregroundColor].map(\.0), [
-            .secondaryLabelColor,
-            nil,
-            .secondaryLabelColor,
-            nil,
-            .secondaryLabelColor
-        ])
-    }
     #endif
-
-    // MARK: - SwiftUI
 
     func testColorsSwiftUI() {
         let text = AttributedString(html: #"""
@@ -1278,6 +1445,48 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
         ])
     }
 
+    #if canImport(UIKit)
+    func testMarkUIKit() {
+        let options = AttributedString.HTMLParsingOptions.uiKit
+            .set(\.mark, .uiKitSecondaryColor)
+        let text = AttributedString(html: #"""
+            Pellentesque <mark>posuere</mark> risus <mark>vitae</mark> tortor commodo.
+            """#, options: options)
+
+        XCTAssertEqual(String(text.characters), """
+            Pellentesque posuere risus vitae tortor commodo.
+            """)
+        XCTAssertEqual(text.runs[\.foregroundColor].map(\.0), [
+            .secondaryLabel,
+            nil,
+            .secondaryLabel,
+            nil,
+            .secondaryLabel
+        ])
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    func testMarkAppKit() {
+        let options = AttributedString.HTMLParsingOptions.appKit
+            .set(\.mark, .appKitSecondaryColor)
+        let text = AttributedString(html: #"""
+            Pellentesque <mark>posuere</mark> risus <mark>vitae</mark> tortor commodo.
+            """#, options: options)
+
+        XCTAssertEqual(String(text.characters), """
+            Pellentesque posuere risus vitae tortor commodo.
+            """)
+        XCTAssertEqual(text.runs[\.foregroundColor].map(\.0), [
+            .secondaryLabelColor,
+            nil,
+            .secondaryLabelColor,
+            nil,
+            .secondaryLabelColor
+        ])
+    }
+    #endif
+
     func testMarkSwiftUI() {
         let options = AttributedString.HTMLParsingOptions.swiftUI
             .set(\.mark, .swiftUISecondaryColor)
@@ -1295,6 +1504,39 @@ class HTMLAttributedStringBuilderTests: XCTestCase {
             nil,
             .secondary
         ])
+    }
+
+    func testPlainText() {
+        let text = String(html: #"""
+            <p>
+                This is a test paragraph
+            </p>
+            <p>This is another test paragraph</p>
+            <ul>
+                <li>This is a test item</li>
+                <li>This is another test item</li>
+            </ul>
+            """#)
+        XCTAssertEqual(text, """
+            This is a test paragraph
+            This is another test paragraph
+            • This is a test item
+            • This is another test item
+            """)
+    }
+
+    func testPlainTextPreservingWhitespace() {
+        let text = String(html: #"""
+                Neque <b>vestibulum,
+
+            <i>turpis</i>!</b><br />
+            """#, preservingWhitespace: true)
+        XCTAssertEqual(text, """
+            Neque vestibulum,
+
+            turpis!
+
+            """)
     }
 
     func testNativeParsingPerformance() {

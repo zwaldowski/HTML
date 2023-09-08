@@ -378,78 +378,9 @@ extension HTMLAttributedStringBuilder.Options.PresentationIntentResolver {
         }
         return result
     }
-
-    #if canImport(UIKit) || canImport(AppKit)
-    static let cocoaParagraphStyles = Self { substring, intent in
-        let components = intent?.components ?? []
-        var result = AttributedString(substring)
-        result.presentationIntent = nil
-        result.center = nil
-        var paragraphStyle = substring.characters.starts(with: "\u{fffc}\t") ? ScaledParagraphStyle() : NSMutableParagraphStyle()
-        paragraphStyle.paragraphSpacing = 4
-        paragraphStyle.alignment = substring.center == true ? .center : .natural
-        paragraphStyle.tabStops = substring.characters.starts(with: "\u{fffc}\t") ? [ NSTextTab(textAlignment: .natural, location: 32) ] : []
-        paragraphStyle.defaultTabInterval = 28
-        var prefixWithNewline = false
-        for component in components {
-            switch component.kind {
-            case .header(let level):
-                result.inlinePresentationIntent = .stronglyEmphasized
-                result.accessibilityHeadingLevel = AttributeScopes.AccessibilityAttributes.HeadingLevelAttribute.Value(rawValue: level)
-                prefixWithNewline = true
-            case .orderedList, .unorderedList:
-                // If there is a paragraph style, we have to assume it applies to the entire list.
-                if paragraphStyle is ScaledParagraphStyle { break }
-                paragraphStyle = ScaledParagraphStyle(paragraphStyle: paragraphStyle)
-                paragraphStyle.headIndent = ScaledParagraphStyle.headIndentUseFirstTabLocation
-            case .listItem:
-                let marker = listItemMarker(for: component, in: components)
-                result.insert(AttributedString("\(marker)\t"), at: result.startIndex)
-            default:
-                break
-            }
-        }
-        // Detect bold text not inside a paragraph as an ambiguous heading.
-        if intent == nil, substring.inlinePresentationIntent == .stronglyEmphasized {
-            result.accessibilityHeadingLevel = .unspecified
-            prefixWithNewline = true
-        }
-        result.paragraphStyle = paragraphStyle
-        // Synthesize line breaks between blocks.
-        if substring.startIndex != substring.base.startIndex, prefixWithNewline {
-            result.insert(AttributedString("\n"), at: result.startIndex)
-        }
-        if substring.endIndex != substring.base.endIndex {
-            result.append(AttributedString("\n"))
-        }
-        return result
-    }
-    #endif
 }
 
 // MARK: - Convenience
-
-public extension HTMLAttributedStringBuilder.Options {
-    /// Updates one of the properties on `self`.
-    ///
-    /// This method is useful for method chaining:
-    ///
-    /// ```swift
-    /// let text = AttributedString(html: html, options: .uiKit.set(\.image, .uiKitSymbols)
-    /// ```
-    func set<Value>(_ keyPath: WritableKeyPath<Self, Value>, _ value: Value) -> Self {
-        var result = self
-        result[keyPath: keyPath] = value
-        return result
-    }
-}
-
-public extension HTMLAttributedStringBuilder.Options.MarkResolver {
-    /// Resolves the marked text by making it bold.
-    static let stronglyEmphasized = Self { attributes, isMarked in
-        isMarked ? attributes.inlinePresentationIntent(.stronglyEmphasized) : attributes
-    }
-}
 
 public extension AttributedString {
     /// Options that affect the parsing of HTML content into an attributed string.
@@ -468,7 +399,8 @@ public extension NSAttributedString {
 
     /// Creates an attributed string from an HTML-formatted string using the provided options.
     convenience init(html: String, options: HTMLParsingOptions) {
-        self.init(AttributedString(html: html, options: options))
+        // swiftlint:disable:next force_try - None of the `objectiveCValue(for:)` methods are meant to throw.
+        try! self.init(AttributedString(html: html, options: options), including: \.html)
     }
 }
 
@@ -501,113 +433,104 @@ public extension String {
     }
 }
 
-// MARK: - UIKit
-
-#if canImport(UIKit)
-public extension HTMLAttributedStringBuilder.Options {
-    /// The default configuration to build an attributed string for use by `UILabel`.
-    static let uiKit = Self(interpretedSyntax: .inlineOnly, style: .uiKitLabelColors, mark: .uiKitSecondaryColor)
-
-    /// The default configuration to build an attributed string for use with `UITextView`.
-    static let uiKitParagraphs = uiKit.set(\.interpretedSyntax, .full(.uiKitParagraphStyles))
-}
-
-public extension HTMLAttributedStringBuilder.Options.PresentationIntentResolver {
-    /// Resolves the presentation intent by creating an appropriate `NSParagraphStyle`.
-    static let uiKitParagraphStyles = cocoaParagraphStyles
-}
-
-public extension HTMLAttributedStringBuilder.Options.StyleResolver {
-    /// Resolves the `color` property to the `UIColor` label colors.
-    static let uiKitLabelColors = Self { attributes, property, value in
-        guard property == "color" else { return attributes }
-        switch SystemColor(rawValue: value) {
-        case .primary:
-            return attributes.foregroundColor(.label)
-        case .secondary:
-            return attributes.foregroundColor(.secondaryLabel)
-        case .tertiary:
-            return attributes.foregroundColor(.tertiaryLabel)
-        case .quaternary:
-            return attributes.foregroundColor(.quaternaryLabel)
-        case nil:
-            return attributes
-        }
-    }
-}
-
-public extension HTMLAttributedStringBuilder.Options.ImageResolver {
-    /// Resolves image URLs to inline symbols.
-    static let uiKitSymbols = Self { substring, _ in
-        guard let symbol = MarkupSymbolDescription(from: substring) else { return nil }
-        var result = AttributedString("\u{fffc}", attributes: substring.runs[substring.startIndex].attributes)
-        result.attachment = NSTextAttachment(image: symbol.uiImage)
-        result.imageURL = nil
-        // When an image occurs at the start of a paragraph, suffix it with a spacer that flexes based on the font size.
-        // When there are multiple lines like this, they align on a grid.
-        if let intent = substring.presentationIntent, case .paragraph = intent.components.first?.kind, intent != substring.base[..<substring.startIndex].runs.last?.presentationIntent {
-            result.characters.append("\t")
-        }
-        return result
-    }
-}
-
-public extension HTMLAttributedStringBuilder.Options.MarkResolver {
-    /// Resolves the marked text by putting all other text in the secondary label color.
-    static let uiKitSecondaryColor = Self { attributes, isMarked in
-        isMarked ? attributes : attributes.foregroundColor(.secondaryLabel)
-    }
-}
-#endif
-
-// MARK: - AppKit
-
-#if canImport(AppKit) && !targetEnvironment(macCatalyst)
-public extension HTMLAttributedStringBuilder.Options {
-    /// The default configuration to build an attributed string for use by `NSTextField`.
-    static let appKit = Self(interpretedSyntax: .inlineOnly, style: .appKitLabelColors, mark: .appKitSecondaryColor)
-
-    /// The default configuration to build an attributed string for use with `NSTextView`.
-    static let appKitParagraphs = appKit.set(\.interpretedSyntax, .full(.appKitParagraphStyles))
-}
-
-public extension HTMLAttributedStringBuilder.Options.PresentationIntentResolver {
-    /// Resolves the presentation intent by creating an appropriate `NSParagraphStyle`.
-    static let appKitParagraphStyles = cocoaParagraphStyles
-}
-
-public extension HTMLAttributedStringBuilder.Options.StyleResolver {
-    /// Resolves the `color` property to the `UIColor` label colors.
-    static let appKitLabelColors = Self { attributes, property, value in
-        guard property == "color" else { return attributes }
-        switch SystemColor(rawValue: value) {
-        case .primary:
-            return attributes.foregroundColor(.labelColor)
-        case .secondary:
-            return attributes.foregroundColor(.secondaryLabelColor)
-        case .tertiary:
-            return attributes.foregroundColor(.tertiaryLabelColor)
-        case .quaternary:
-            return attributes.foregroundColor(.quaternaryLabelColor)
-        case nil:
-            return attributes
-        }
-    }
-}
-
-public extension HTMLAttributedStringBuilder.Options.MarkResolver {
-    /// Resolves the marked text by putting all other text in the secondary label color.
-    static let appKitSecondaryColor = Self { attributes, isMarked in
-        isMarked ? attributes : attributes.foregroundColor(.secondaryLabelColor)
-    }
-}
-#endif
-
-// MARK: - SwiftUI
+// MARK: - Presets
 
 public extension HTMLAttributedStringBuilder.Options {
     /// The default configuration to build an attributed string for use by `Text`.
     static let swiftUI = Self(interpretedSyntax: .inlineOnly, style: .swiftUILabelColors, mark: .swiftUISecondaryColor)
+
+    #if canImport(UIKit)
+    /// The default configuration to build an attributed string for use by `UILabel`.
+    static let uiKit = Self(interpretedSyntax: .inlineOnly, style: .uiKitLabelColors, mark: .uiKitSecondaryColor)
+
+    /// The default configuration to build an attributed string for use with `UITextView`.
+    ///
+    /// - important: Use ``Foundation/NSAttributedString/init(html:options:)`` or pass `including: \.html` when converting the result to `NSAttributedString`.
+    static let uiKitParagraphs = Self(interpretedSyntax: .full(.uiKitParagraphStyles), style: .uiKitLabelColors, mark: .uiKitSecondaryColor)
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    /// The default configuration to build an attributed string for use by `NSTextField`.
+    static let appKit = Self(interpretedSyntax: .inlineOnly, style: .appKitLabelColors, mark: .appKitSecondaryColor)
+
+    /// The default configuration to build an attributed string for use with `NSTextView`.
+    static let appKitParagraphs = Self(interpretedSyntax: .full(.appKitParagraphStyles), style: .appKitLabelColors, mark: .appKitSecondaryColor)
+    #endif
+
+    /// Updates one of the properties on `self`.
+    ///
+    /// This method is useful for method chaining:
+    ///
+    /// ```swift
+    /// let text = AttributedString(html: html, options: .uiKit.set(\.image, .uiKitSymbols)
+    /// ```
+    func set<Value>(_ keyPath: WritableKeyPath<Self, Value>, _ value: Value) -> Self {
+        var result = self
+        result[keyPath: keyPath] = value
+        return result
+    }
+}
+
+public extension HTMLAttributedStringBuilder.Options.PresentationIntentResolver {
+    /// Resolves the presentation intent by creating an appropriate `NSParagraphStyle`.
+    ///
+    /// - important: Use ``Foundation/NSAttributedString/init(html:options:)`` or pass `including: \.html` when converting the result to `NSAttributedString`.
+    private static let cocoaParagraphStyles = Self { substring, intent in
+        let components = intent?.components ?? []
+        var result = AttributedString(substring)
+        result.presentationIntent = nil
+        result.center = nil
+        var paragraphStyle = AttributeScopes.HTMLAttributes.ParagraphStyleIntentAttribute()
+        paragraphStyle.paragraphSpacing = 4
+        paragraphStyle.alignment = substring.center == true ? .center : .natural
+        paragraphStyle.defaultTabInterval = 28
+        paragraphStyle.firstTab = substring.characters.starts(with: "\u{fffc}\t") ? 32 : nil
+        var prefixWithNewline = false
+        for component in components {
+            switch component.kind {
+            case .header(let level):
+                result.inlinePresentationIntent = .stronglyEmphasized
+                result.accessibilityHeadingLevel = AttributeScopes.AccessibilityAttributes.HeadingLevelAttribute.Value(rawValue: level)
+                prefixWithNewline = true
+            case .orderedList, .unorderedList:
+                // If there is a paragraph style, we have to assume it applies to the entire list.
+                paragraphStyle.headIndent = 28
+            case .listItem:
+                let marker = listItemMarker(for: component, in: components)
+                result.insert(AttributedString("\(marker)\t"), at: result.startIndex)
+            default:
+                break
+            }
+        }
+        // Detect bold text not inside a paragraph as an ambiguous heading.
+        if intent == nil, substring.inlinePresentationIntent == .stronglyEmphasized {
+            result.accessibilityHeadingLevel = .unspecified
+            prefixWithNewline = true
+        }
+        result.paragraphStyleIntent = paragraphStyle
+        // Synthesize line breaks between blocks.
+        if substring.startIndex != substring.base.startIndex, prefixWithNewline {
+            result.insert(AttributedString("\n"), at: result.startIndex)
+        }
+        if substring.endIndex != substring.base.endIndex {
+            result.append(AttributedString("\n"))
+        }
+        return result
+    }
+    
+    #if canImport(UIKit)
+    /// Resolves the presentation intent by creating an appropriate `NSParagraphStyle`.
+    ///
+    /// - important: Use ``Foundation/NSAttributedString/init(html:options:)`` or pass `including: \.html` when converting the result to `NSAttributedString`.
+    static var uiKitParagraphStyles: Self { cocoaParagraphStyles }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    /// Resolves the presentation intent by creating an appropriate `NSParagraphStyle`.
+    ///
+    /// - important: Use ``Foundation/NSAttributedString/init(html:options:)`` or pass `including: \.html` when converting the result to `NSAttributedString`.
+    static var appKitParagraphStyles: Self { cocoaParagraphStyles }
+    #endif
 }
 
 public extension HTMLAttributedStringBuilder.Options.StyleResolver {
@@ -630,11 +553,103 @@ public extension HTMLAttributedStringBuilder.Options.StyleResolver {
             return attributes
         }
     }
+    
+    #if canImport(UIKit)
+    /// Resolves the `color` property to the `UIColor` label colors.
+    static let uiKitLabelColors = Self { attributes, property, value in
+        guard property == "color" else { return attributes }
+        switch SystemColor(rawValue: value) {
+        case .primary:
+            return attributes.foregroundColor(.label)
+        case .secondary:
+            return attributes.foregroundColor(.secondaryLabel)
+        case .tertiary:
+            return attributes.foregroundColor(.tertiaryLabel)
+        case .quaternary:
+            return attributes.foregroundColor(.quaternaryLabel)
+        case nil:
+            return attributes
+        }
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    /// Resolves the `color` property to the `NSColor` label colors.
+    static let appKitLabelColors = Self { attributes, property, value in
+        guard property == "color" else { return attributes }
+        switch SystemColor(rawValue: value) {
+        case .primary:
+            return attributes.foregroundColor(.labelColor)
+        case .secondary:
+            return attributes.foregroundColor(.secondaryLabelColor)
+        case .tertiary:
+            return attributes.foregroundColor(.tertiaryLabelColor)
+        case .quaternary:
+            return attributes.foregroundColor(.quaternaryLabelColor)
+        case nil:
+            return attributes
+        }
+    }
+    #endif
+}
+
+public extension HTMLAttributedStringBuilder.Options.ImageResolver {
+    #if canImport(UIKit)
+    /// Resolves image URLs to inline symbols.
+    static let uiKitSymbols = Self { substring, _ in
+        guard let url = substring.imageURL,
+              // path-only URI
+              url.scheme == nil, url.user == nil, url.password == nil, url.host == nil, url.port == nil, url.query == nil, url.fragment == nil,
+              // relative path
+              case let name = url.path,
+              name.first != "/",
+              // prefer system images
+              let image = UIImage(systemName: name) ?? UIImage(named: name),
+              image.isSymbolImage else { return nil }
+
+        if substring.unicodeScalars.count > 1 {
+            image.accessibilityLabel = String(substring.characters)
+        } else {
+            // If the image has no label, make sure it is seen as a decoration in `NSTextAttachment`.
+            image.accessibilityTraits = .image
+            image.isAccessibilityElement = true
+        }
+
+        var result = AttributedString("\u{fffc}", attributes: substring.runs[substring.startIndex].attributes)
+        result.attachmentIntent = AttributeScopes.HTMLAttributes.AttachmentIntentAttribute(image: image, name: name)
+        result.imageURL = nil
+        // When an image occurs at the start of a paragraph, suffix it with a spacer that flexes based on the font size.
+        // When there are multiple lines like this, they align on a grid.
+        if let intent = substring.presentationIntent, case .paragraph = intent.components.first?.kind, intent != substring.base[..<substring.startIndex].runs.last?.presentationIntent {
+            result.characters.append("\t")
+        }
+        return result
+    }
+    #endif
 }
 
 public extension HTMLAttributedStringBuilder.Options.MarkResolver {
+    /// Resolves the marked text by making it bold.
+    static let stronglyEmphasized = Self { attributes, isMarked in
+        isMarked ? attributes.inlinePresentationIntent(.stronglyEmphasized) : attributes
+    }
+
     /// Resolves the marked text by putting all other text in the secondary label color.
     static let swiftUISecondaryColor = Self { attributes, isMarked in
         isMarked ? attributes : attributes.foregroundColor(.secondary)
     }
+
+    #if canImport(UIKit)
+    /// Resolves the marked text by putting all other text in the secondary label color.
+    static let uiKitSecondaryColor = Self { attributes, isMarked in
+        isMarked ? attributes : attributes.foregroundColor(.secondaryLabel)
+    }
+    #endif
+
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    /// Resolves the marked text by putting all other text in the secondary label color.
+    static let appKitSecondaryColor = Self { attributes, isMarked in
+        isMarked ? attributes : attributes.foregroundColor(.secondaryLabelColor)
+    }
+    #endif
 }
