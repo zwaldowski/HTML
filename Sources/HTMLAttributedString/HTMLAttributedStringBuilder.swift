@@ -4,9 +4,9 @@ import SwiftUI
 /// An object that incrementally creates an `AttributedString` from a fragment of HTML.
 public final class HTMLAttributedStringBuilder {
     /// Options that affect the parsing of HTML content into an attributed string.
-    public struct Options {
+    public struct Options: Sendable {
         /// A type that represents the syntax for interpreting an HTML string.
-        public enum InterpretedSyntax {
+        public enum InterpretedSyntax: Sendable {
             /// A syntax value that interprets all block and inline syntax.
             ///
             /// Use this mode when you want the complete `PresentationIntent` graph to use in a custom renderer.
@@ -28,41 +28,41 @@ public final class HTMLAttributedStringBuilder {
         }
 
         /// A type that transforms block elements in HTML.
-        public struct PresentationIntentResolver {
-            var handler: (AttributedSubstring, PresentationIntent?) -> AttributedString
+        public struct PresentationIntentResolver: Sendable {
+            var handler: @Sendable (AttributedSubstring, PresentationIntent?) -> AttributedString
 
             /// Creates a presentation intent resolver with the specified closure.
-            public init(handler: @escaping (AttributedSubstring, PresentationIntent?) -> AttributedString) {
+            public init(handler: @escaping @Sendable (AttributedSubstring, PresentationIntent?) -> AttributedString) {
                 self.handler = handler
             }
         }
 
         /// A type that transforms `style=` attributes in HTML.
-        public struct StyleResolver {
-            var handler: (AttributeContainer, String, String) -> AttributeContainer
+        public struct StyleResolver: Sendable {
+            var handler: @Sendable (AttributeContainer, String, String) -> AttributeContainer
 
             /// Creates a style resolver with the specified closure.
-            public init(handler: @escaping (AttributeContainer, String, String) -> AttributeContainer) {
+            public init(handler: @escaping @Sendable (AttributeContainer, String, String) -> AttributeContainer) {
                 self.handler = handler
             }
         }
 
         /// A type that transforms `img` tags in HTML.
-        public struct ImageResolver {
-            var handler: (AttributedSubstring, URL?) -> AttributedString?
+        public struct ImageResolver: Sendable {
+            var handler: @Sendable (AttributedSubstring, URL?) -> AttributedString?
 
             /// Creates an image resolver with the specified closure.
-            public init(handler: @escaping (AttributedSubstring, URL?) -> AttributedString?) {
+            public init(handler: @escaping @Sendable (AttributedSubstring, URL?) -> AttributedString?) {
                 self.handler = handler
             }
         }
 
         /// A type that transforms `mark` tags in HTML.
-        public struct MarkResolver {
-            var handler: (AttributeContainer, Bool) -> AttributeContainer
+        public struct MarkResolver: Sendable {
+            var handler: @Sendable (AttributeContainer, Bool) -> AttributeContainer
 
             /// Creates a mark resolver with the specified closure.
-            public init(handler: @escaping (AttributeContainer, Bool) -> AttributeContainer) {
+            public init(handler: @escaping @Sendable (AttributeContainer, Bool) -> AttributeContainer) {
                 self.handler = handler
             }
         }
@@ -317,7 +317,7 @@ public final class HTMLAttributedStringBuilder {
         character == "\t" || character.unicodeScalars.first?.properties.generalCategory == .spaceSeparator
     }
 
-    func resolve<Key>(_ key: KeyPath<AttributeDynamicLookup, Key>, upTo upperBound: AttributedString.Index? = nil, using handler: (AttributedSubstring, Key.Value?) -> AttributedString?) where Key: AttributedStringKey {
+    func resolve<Key>(_ key: KeyPath<AttributeDynamicLookup, Key>, upTo upperBound: AttributedString.Index? = nil, using handler: (AttributedSubstring, Key.Value?) -> AttributedString?) where Key: AttributedStringKey, Key.Value: Sendable {
         let upperBound = upperBound ?? result.endIndex
         guard let (value, range) = result[..<upperBound].runs[key].last else { return }
         if let replacement = handler(result[range], value) {
